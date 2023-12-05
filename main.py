@@ -24,9 +24,12 @@ def signup():
 def view_list(title, user_list):
     pass
 
-def view_someones_movie_list(users):
-    username_to_view = input("Enter the username of the person whose movie list you want to view: ")
-    pass
+
+### WITH 5+ JOINS
+def view_someones_movie_list():
+    username = input("Enter the username of the person whose movie list you want to view: ")
+    Utils.see_watched_list(username)
+
 
 def add_movie(user: Utils.User):
     title = input("Enter the title of the movie: ")
@@ -42,14 +45,21 @@ def delete_movie(user):
     movie_id = Utils.search_movie_id_by_name(movie_name)
     Utils.delete_movie(user, movie_id)
 
+
+def movie_by_genre():
+    genre = input("Enter the genre you want to search for: ")
+    Utils.get_movies_by_genre(genre)
+
 def movie_submenu(user: Utils.User):
     while True:
         print("\nMovie Menu:")
         print("1. Add Movie")
         print("2. Delete Movie")
         print("3. List Movies added by you")
-        print("4. Back to Main Menu")
-        choice = input("Enter your choice (1-4): ")
+        print("4. List Movies by Genre")
+        print("5. Sort Movies")
+        print("6. Back to Main Menu")
+        choice = input("Enter your choice (1-5): ")
 
         if choice == '1':
             add_movie(user)
@@ -57,8 +67,22 @@ def movie_submenu(user: Utils.User):
             delete_movie(user)
         elif choice == '3':
             Utils.list_movies_added_by_user(user.username)
-
         elif choice == '4':
+            movie_by_genre()
+        elif choice == '5':
+            print("1.Top 10 by Release Date")
+            print("2.Top 10 by User rating")
+            print("3.Top 10 by NUmber of people who have watched the movie")
+            choice = input("Enter your choice (1-4): ")
+            if choice == '1':
+                Utils.get_top_movies_by_release_date()
+            elif choice == '2':
+                Utils.get_top_movies_by_user_rating()
+            elif choice == '3':
+                Utils.get_top_movies_by_watch_count()
+            else:
+                print("\nInvalid choice")
+        elif choice == '6':
             print("Returning to the main menu.")
             break
         else:
@@ -121,8 +145,8 @@ def add_to_favorite(user):
 
 def delete_from_favorite(user):
     movie_id = input("Enter the ID of the movie you want to remove from your favorites: ")
-    list_title = input("Enter the ID of the list you want to add this movie to: ")
-    Utils.delete_movie_from_favorite_list(user.username,list_title, movie_id)
+    list_title = input("Enter the ID of the list you want to remove this movie from: ")
+    Utils.delete_movie_from_fav(user.username,list_title, movie_id)
     print("Movie removed from your favorite list.")
 
 def view_favorite_lists(user):
@@ -200,6 +224,12 @@ def watch_list_submenu(user):
         else:
             print("\nInvalid choice. Please enter a number between 1 and 3.")
 
+def view_cast():
+    ## this movie info about the cast and all the movies they have acted in
+    movie_id = input("Enter the ID the cast: ")
+    Utils.see_cast_info(movie_id)
+
+
 def main_menu(current_user, users):
     while True:
         print(f"\nWelcome, {current_user.username}!")
@@ -208,9 +238,10 @@ def main_menu(current_user, users):
         print("3. Favorite List")
         print("4. Watch List")
         print("5. Log Out")
-        print("6. View Someone's Movie List")
+        print("6. View Someone's Movie List Analytics")
+        print("7. Cast")
 
-        choice = input("Enter your choice (1-6): ")
+        choice = input("Enter your choice (1-7): ")
 
         if choice == '1':
             movie_submenu(current_user)
@@ -229,8 +260,10 @@ def main_menu(current_user, users):
             return
 
         elif choice == '6':
-            view_someones_movie_list(users)
+            view_someones_movie_list()
 
+        elif choice == '7':
+            view_cast()
         else:
             print("\nInvalid choice. Please enter a number between 1 and 6.")
 

@@ -470,7 +470,7 @@ def delete_movie_from_fav(user_id, list_title, movie_id):
     try:
         with conn, conn.cursor() as cursor:
             # Check if the favorite list exists for the user
-            cursor.execute("SELECT id FROM fav WHERE title = %s AND user_id = %s", (list_title, user_id))
+            cursor.execute("SELECT id FROM fav WHERE id = %s AND user_id = %s", (list_title, user_id))
             fav_list_id = cursor.fetchone()
 
             if fav_list_id:
@@ -489,13 +489,6 @@ def delete_movie_from_fav(user_id, list_title, movie_id):
 # Add movie to watched list function
 def add_movie_to_watched(user_id, movie_id):
     conn = connect_to_db()
-
-    # Check if the user is logged in
-    if not is_user_logged_in(user_id):
-        print("Unauthorized. Please log in to add movies to your watched list.")
-        close_connection(conn)
-        return
-
     try:
         with conn, conn.cursor() as cursor:
             # Check if the movie is already in the watched list
@@ -542,3 +535,182 @@ def view_watched_list(user_id):
 
     close_connection(conn)
 
+# Function to get movies by genre
+def get_movies_by_genre(genre):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    try:
+        # Retrieve movies by genre
+        cursor.execute("SELECT id, title, release_date, runtime FROM movies WHERE genre = %s", (genre,))
+        movies = cursor.fetchall()
+
+        if movies:
+            print(f"Movies in the '{genre}' genre:")
+            for movie in movies:
+                print(f"Movie ID: {movie[0]}, Title: {movie[1]}, Release Date: {movie[2]}, Runtime: {movie[3]}")
+        else:
+            print(f"No movies found in the '{genre}' genre.")
+
+    except psycopg2.Error as e:
+        print(f"Error while retrieving movies by genre: {e}")
+
+    finally:
+        close_connection(conn)
+
+
+
+# Function to get top 10 movies sorted by release date
+def get_top_movies_by_release_date():
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    try:
+        # Retrieve top 10 movies sorted by release date
+        cursor.execute("SELECT id, title, release_date, runtime FROM movies ORDER BY release_date DESC LIMIT 10")
+        movies = cursor.fetchall()
+
+        if movies:
+            print("Top 10 movies sorted by release date:")
+            for movie in movies:
+                print(f"Movie ID: {movie[0]}, Title: {movie[1]}, Release Date: {movie[2]}, Runtime: {movie[3]}")
+        else:
+            print("No movies found.")
+
+    except psycopg2.Error as e:
+        print(f"Error while retrieving top movies by release date: {e}")
+
+    finally:
+        close_connection(conn)
+
+# Function to get top 10 movies sorted by user rating
+def get_top_movies_by_user_rating():
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    try:
+        # Retrieve top 10 movies sorted by average user rating
+        cursor.execute("""
+            SELECT m.id, m.title, m.release_date, m.runtime, AVG(r.stars) AS avg_rating
+            FROM movies m
+            LEFT JOIN review r ON m.id = r.movie_id
+            GROUP BY m.id, m.title, m.release_date, m.runtime
+            ORDER BY avg_rating DESC NULLS LAST LIMIT 10
+        """)
+        movies = cursor.fetchall()
+
+        if movies:
+            print("Top 10 movies sorted by user rating:")
+            for movie in movies:
+                print(f"Movie ID: {movie[0]}, Title: {movie[1]}, Release Date: {movie[2]}, Runtime: {movie[3]}, Average Rating: {movie[4]}")
+        else:
+            print("No movies found.")
+
+    except psycopg2.Error as e:
+        print(f"Error while retrieving top movies by user rating: {e}")
+
+    finally:
+        close_connection(conn)
+
+# Function to get top 10 movies by the number of people who have watched the movie
+def get_top_movies_by_watch_count():
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    try:
+        # Retrieve top 10 movies by the number of people who have watched the movie
+        cursor.execute("""
+            SELECT m.id, m.title, m.release_date, m.runtime, COUNT(w.user_id) AS watch_count
+            FROM movies m
+            LEFT JOIN watched w ON m.id = w.movie_id
+            GROUP BY m.id, m.title, m.release_date, m.runtime
+            ORDER BY watch_count DESC NULLS LAST LIMIT 10
+        """)
+        movies = cursor.fetchall()
+
+        if movies:
+            print("Top 10 movies by the number of people who have watched the movie:")
+            for movie in movies:
+                print(f"Movie ID: {movie[0]}, Title: {movie[1]}, Release Date: {movie[2]}, Runtime: {movie[3]}, Watch Count: {movie[4]}")
+        else:
+            print("No movies found.")
+
+    except psycopg2.Error as e:
+        print(f"Error while retrieving top movies by watch count: {e}")
+
+    finally:
+        close_connection(conn)
+
+# Function to see watched list with movie details, watch count, and user rating
+# Function to see watched list with additional details
+def see_watched_list(username):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    try:
+        # Retrieve watched list details for the specified user
+        cursor.execute("""
+            SELECT m.title, COUNT(DISTINCT w.user_id) AS watch_count, AVG(r.stars) AS avg_rating, COUNT(DISTINCT ctm.cast_id) AS total_cast_members
+            FROM movies m
+            JOIN watched w ON m.id = w.movie_id
+            LEFT JOIN review r ON m.id = r.movie_id
+            LEFT JOIN casts_to_movie ctm ON m.id = ctm.movie_id
+            LEFT JOIN casts c ON ctm.cast_id = c.id
+            WHERE w.user_id = %s
+            GROUP BY m.title
+            ORDER BY avg_rating DESC NULLS LAST
+        """, (username,))
+        watched_list = cursor.fetchall()
+
+        if watched_list:
+            print(f"Watched list for user {username} with additional details:")
+            for movie in watched_list:
+                print(f"Movie: {movie[0]}, Watch Count: {movie[1]}, Average Rating: {movie[2]}, Total Cast Members: {movie[3]}")
+        else:
+            print(f"No watched list found for user {username}.")
+
+    except psycopg2.Error as e:
+        print(f"Error while retrieving watched list details: {e}")
+
+    finally:
+        close_connection(conn)
+
+
+# Function to see cast information and movies they have worked in
+def see_cast_info(cast_id):
+    conn = connect_to_db()
+    cursor = conn.cursor()
+
+    try:
+        # Retrieve cast information
+        cursor.execute("SELECT name, gender FROM casts WHERE id = %s", (cast_id,))
+        cast_info = cursor.fetchone()
+
+        if cast_info:
+            print(f"Cast Information for Cast ID {cast_id}:")
+            print(f"Name: {cast_info[0]}, Gender: {cast_info[1]}")
+
+            # Retrieve movies the cast member has worked in
+            cursor.execute("""
+                SELECT m.title, m.release_date, m.runtime
+                FROM movies m
+                JOIN casts_to_movie ctm ON m.id = ctm.movie_id
+                WHERE ctm.cast_id = %s
+            """, (cast_id,))
+            movies_worked = cursor.fetchall()
+
+            if movies_worked:
+                print("\nMovies Worked In:")
+                for movie in movies_worked:
+                    print(f"Title: {movie[0]}, Release Date: {movie[1]}, Runtime: {movie[2]}")
+            else:
+                print("No movies found for this cast member.")
+
+        else:
+            print(f"No cast member found with ID {cast_id}.")
+
+    except psycopg2.Error as e:
+        print(f"Error while retrieving cast information: {e}")
+
+    finally:
+        close_connection(conn)
